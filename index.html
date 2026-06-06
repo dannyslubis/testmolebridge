@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minigame Mole Bridge - Misi 0,250 M</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        /* === SETUP GLOBAL & RESPONSIVITAS === */
+        body {
+            display: flex; justify-content: center; align-items: center;     
+            height: 100vh; height: 100svh; width: 100vw;
+            background-color: #1a1a1a; margin: 0; padding: 0;
+            font-family: 'VT323', monospace; color: white;
+            touch-action: none; overflow: hidden;        
+        }
+        #game-container {
+            position: relative; width: 100%; height: 100%;
+            max-width: calc(100vh * (16 / 9)); max-width: calc(100svh * (16 / 9));
+            max-height: calc(100vw * (9 / 16)); aspect-ratio: 16 / 9;
+            background-color: #000;
+            image-rendering: pixelated; image-rendering: crisp-edges;
+            container-type: inline-size; overflow: hidden;
+        }
+
+        .scene { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; }
+        
+        .layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: 100% 100%; background-position: center; background-repeat: no-repeat;
+            image-rendering: inherit;
+        }
+        
+        .btn-grid { position: absolute; background: transparent; border: none; cursor: pointer; z-index: 10; }
+        .popup-layer { display: none; z-index: 20; }
+        
+        .calc-text { position: absolute; height: 11.11%; width: 25%; display: flex; align-items: center; justify-content: center; text-align: center; color: #000; font-size: 3cqw; }
+
+        /* === TITLE SCREEN === */
+        #scene-title { display: block; z-index: 50; transition: opacity 0.5s ease; background-color: #000; }
+        #layer-titlescreen { background-image: url('titlescreen.png'); }
+
+        /* === SCENE: VISUAL NOVEL (FASE 1 & 3) === */
+        #vn-text-content { position: absolute; left: 6.25%; top: 66.66%; width: 81.25%; height: 22.22%; padding: 2% 3%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; z-index: 51; color: white; text-shadow: 2px 2px 0 #000; font-size: 3.5cqw; }
+        #vn-char-name { font-weight: bold; color: #f1c40f; font-size: 4cqw; margin-bottom: 0.5cqw; }
+
+        /* === SCENE: TIMBANGAN MOL (FASE 2) === */
+        #layer-canvas-mol { background-image: url('kanvasmb.png'); z-index: 1; }
+        #layer-bottle-mol { z-index: 2; transition: background-image 0.1s; }
+        #layer-salt-mol { position: absolute; left: 43.75%; top: 66.66%; width: 12.5%; height: 22.22%; display: flex; justify-content: center; align-items: center; z-index: 3; }
+        .salt-pile { background-color: #ffffff; border-radius: 50%; width: 0%; height: 0%; transition: all 0.3s ease; }
+        #layer-key-mol { background-image: url('keymb.png'); z-index: 4; pointer-events: none; }
+        #layer-nav-mol { background-image: url('mbkey1.png'); z-index: 5; pointer-events: none; }
+        #scale-display { position: absolute; left: 43.75%; top: 88.88%; width: 12.5%; height: 11.11%; display: flex; justify-content: center; align-items: center; text-align: center; color: #5b7ea4; font-size: 3.5cqw; z-index: 5; }
+        #popup-calc-mol { background-image: url('popupmb.png'); }
+        #calc-mass-mol { left: 43.75%; top: 33.33%; } 
+        #calc-mr-mol { left: 43.75%; top: 44.44%; }   
+        #calc-result-mol { left: 43.75%; top: 55.55%; } 
+
+        /* === SCENE: MOLARITAS (FASE 2) === */
+        #layer-canvas-molar { background-image: url('kanvasmbm.png'); z-index: 1; }
+        #layer-aqua { background-image: url('mbaqua11.png'); z-index: 2; }
+        #water-stream { position: absolute; left: 45.3%; top: 22.5%; width: 0.6%; height: 0%; background-color: rgba(180, 230, 255, 0.6); z-index: 2; transition: height 0.1s ease; }
+        #beaker-fluid-container { position: absolute; left: 37.5%; top: 33.33%; width: 31.25%; height: 55.55%; z-index: 2; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; overflow: hidden; border-bottom-left-radius: 3cqw; border-bottom-right-radius: 3cqw; }
+        #layer-liquid { width: 100%; height: 0%; background-color: rgba(180, 230, 255, 0.25); transition: height 0.1s ease, background-color 0.5s ease; }
+        #layer-precipitate { width: 100%; height: 0%; background-color: transparent; transition: height 0.4s ease, background-color 0.3s ease; }
+        #layer-stir { background-image: url('mbgstir.png'); z-index: 2; display: block; }
+        #layer-hand-pour { background-image: url('mbgstir1.png'); z-index: 2; display: none; }
+        #layer-glass { background-image: url('mbglass.png'); z-index: 3; pointer-events: none; }
+        #layer-key-molar { background-image: url('keymbm.png'); z-index: 4; pointer-events: none; }
+        #layer-key-add { background-image: url('keymbm1.png'); z-index: 5; pointer-events: none; display: none; }
+        #layer-nav-molar { background-image: url('mbkey3.png'); z-index: 5; pointer-events: none; }
+        #volume-display { position: absolute; left: 50%; top: 88.88%; width: 12.5%; height: 11.11%; display: flex; justify-content: center; align-items: center; text-align: center; color: #dcdde1; font-size: 3.5cqw; z-index: 6; }
+        #alert-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); color: #e74c3c; font-size: 2.8cqw; font-weight: bold; text-shadow: 2px 2px 0 #000; opacity: 0; transition: opacity 0.3s ease; z-index: 7; pointer-events: none; }
+        #popup-molarity { background-image: url('popupmbm.png'); }
+        #calc-mol-molar { left: 43.75%; top: 33.33%; } 
+        #calc-liter-molar { left: 43.75%; top: 44.44%; }   
+        #calc-result-molar { left: 43.75%; top: 55.55%; } 
+
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+
+    <div id="layer-global-exit" class="layer" style="background-image: url('keyexit.png'); z-index: 89; pointer-events: none; display: none;"></div>
+    <button id="btn-global-exit" class="btn-grid" style="left: 93.75%; top: 0%; width: 6.25%; height: 11.11%; z-index: 90; display: none;" onclick="bukaPopupExit()"></button>
+
+    <div id="popup-exit-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; display: none;">
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; opacity: 0.5;"></div>
+        <div class="layer" style="background-image: url('popupexit.png'); z-index: 101;"></div>
+        <button class="btn-grid" style="left: 31.25%; top: 55.55%; width: 18.75%; height: 11.11%; z-index: 102;" onclick="keluarKeMenuUtama()"></button> <button class="btn-grid" style="left: 50%; top: 55.55%; width: 18.75%; height: 11.11%; z-index: 102;" onclick="tutupPopupExit()"></button> </div>
+
+    <div id="scene-title" class="scene">
+        <div id="layer-titlescreen" class="layer"></div>
+        <button class="btn-grid" style="left: 37.5%; top: 55.55%; width: 25%; height: 22.22%; z-index: 52;" onclick="mulaiSimulasi()"></button>
+    </div>
+
+    <div id="scene-vn" class="scene">
+        <div id="layer-vn-bg" class="layer" style="background-image: url('kanvasmbbg.png');"></div>
+        <div id="layer-vn-txtbox" class="layer" style="background-image: url('txtbox.png');"></div>
+        
+        <div id="vn-text-content">
+            <span id="vn-char-name">Nama Karakter</span>
+            <span id="vn-dialogue">Teks Percakapan...</span>
+        </div>
+
+        <div id="layer-vn-nextskip" class="layer" style="background-image: url('keynextskip.png'); z-index: 52;"></div>
+        <button id="btn-vn-next" class="btn-grid" style="left: 87.5%; top: 66.66%; width: 6.25%; height: 11.11%; z-index: 53;" onclick="nextDialog()"></button>
+        <button id="btn-vn-skip" class="btn-grid" style="left: 87.5%; top: 77.77%; width: 6.25%; height: 11.11%; z-index: 53;" onclick="skipDialog()"></button>
+
+        <div id="layer-quest-done" class="layer" style="background-image: url('keyquestdone.png'); z-index: 52; display: none;"></div>
+        <button id="btn-quest-done" class="btn-grid" style="left: 37.5%; top: 77.77%; width: 25%; height: 11.11%; z-index: 53; display: none;" onclick="keluarKeMenuUtama()"></button>
+
+        <div id="layer-quest-undone" class="layer" style="background-image: url('keyquestundone.png'); z-index: 52; display: none;"></div>
+        <button id="btn-quest-retry" class="btn-grid" style="left: 31.25%; top: 77.77%; width: 18.75%; height: 11.11%; z-index: 53; display: none;" onclick="ulangFase2()"></button>
+        <button id="btn-quest-fail" class="btn-grid" style="left: 50%; top: 77.77%; width: 18.75%; height: 11.11%; z-index: 53; display: none;" onclick="keluarKeMenuUtama()"></button>
+    </div>
+
+    <div id="scene-timbangan" class="scene">
+        <div id="layer-canvas-mol" class="layer"></div>
+        <div id="layer-bottle-mol" class="layer"></div>
+        <div id="layer-salt-mol"><div id="salt-pile" class="salt-pile"></div></div>
+        <div id="layer-key-mol" class="layer"></div>
+        <div id="layer-nav-mol" class="layer"></div>
+        <div id="scale-display">0,000</div>
+
+        <button class="btn-grid" style="left: 6.25%; top: 66.66%; width: 6.25%; height: 11.11%;" onclick="tambahMassa(5)"></button>
+        <button class="btn-grid" style="left: 12.5%; top: 66.66%; width: 6.25%; height: 11.11%;" onclick="tambahMassa(1)"></button>
+        <button class="btn-grid" style="left: 18.75%; top: 66.66%; width: 6.25%; height: 11.11%;" onclick="tambahMassa(0.5)"></button>
+        <button class="btn-grid" style="left: 6.25%; top: 77.77%; width: 18.75%; height: 11.11%;" onclick="resetTimbangan()"></button>
+        <button class="btn-grid" style="left: 75%; top: 77.77%; width: 18.75%; height: 11.11%;" onclick="bukaHitungMol()"></button>
+
+        <button class="btn-grid" style="left: 87.5%; top: 22.22%; width: 12.5%; height: 11.11%;" onclick="gotoScene('scene-molaritas')"></button>
+
+        <div id="popup-calc-mol" class="layer popup-layer">
+            <button class="btn-grid" style="left: 87.5%; top: 22.22%; width: 6.25%; height: 11.11%; z-index: 21;" onclick="tutupHitungMol()"></button>
+            <div id="calc-mass-mol" class="calc-text">0,000 g</div>
+            <div id="calc-mr-mol" class="calc-text">0,000 g/mol</div>
+            <div id="calc-result-mol" class="calc-text">0,000 mol</div>
+        </div>
+    </div>
+
+    <div id="scene-molaritas" class="scene">
+        <div id="layer-canvas-molar" class="layer"></div>
+        <div id="beaker-fluid-container">
+            <div id="layer-liquid"></div>
+            <div id="layer-precipitate"></div>
+        </div>
+        <div id="water-stream"></div>
+        <div id="layer-stir" class="layer"></div>
+        <div id="layer-hand-pour" class="layer"></div>
+        <div id="layer-aqua" class="layer"></div>
+        <div id="layer-glass" class="layer"></div>
+        <div id="layer-key-molar" class="layer"></div>
+        <div id="layer-key-add" class="layer"></div>
+        <div id="layer-nav-molar" class="layer"></div>
+        <div id="volume-display">0,000</div>
+        <div id="alert-msg"></div>
+
+        <button id="btn-add-water" class="btn-grid" style="left: 6.25%; top: 33.33%; width: 18.75%; height: 11.11%;" onmousedown="mulaiTuangAir()" onmouseup="hentiTuangAir()" onmouseleave="hentiTuangAir()" ontouchstart="mulaiTuangAir()" ontouchend="hentiTuangAir()"></button>
+        <button id="btn-add-substance" class="btn-grid" style="left: 6.25%; top: 55.55%; width: 18.75%; height: 11.11%; display: none;" onclick="eksekusiTambahZat()"></button>
+        <button class="btn-grid" style="left: 6.25%; top: 77.77%; width: 18.75%; height: 11.11%;" onclick="resetSimulasiMolar()"></button>
+        
+        <button class="btn-grid" style="left: 75%; top: 33.33%; width: 18.75%; height: 11.11%;" onclick="evaluasiMisi()"></button>
+        
+        <button class="btn-grid" style="left: 75%; top: 77.77%; width: 18.75%; height: 11.11%;" onclick="bukaMolaritas()"></button>
+
+        <button class="btn-grid" style="left: 87.5%; top: 11.11%; width: 12.5%; height: 11.11%;" onclick="gotoScene('scene-timbangan')"></button>
+
+        <div id="popup-molarity" class="layer popup-layer">
+            <button class="btn-grid" style="left: 87.5%; top: 22.22%; width: 6.25%; height: 11.11%; z-index: 22;" onclick="tutupMolaritas()"></button>
+            <div id="calc-mol-molar" class="calc-text">0,000 mol</div>
+            <div id="calc-liter-molar" class="calc-text">0,000 L</div>
+            <div id="calc-result-molar" class="calc-text">0,000 M</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ==========================================
+    // UTILITAS FORMAT ANGKA & VARIABEL GLOBAL
+    // ==========================================
+    const mrNaCl = 58;
+    const colorNaCl = '#ffffff';
+    let massaTimbangan = 0;
+
+    function format3Desimal(angka) { return angka.toFixed(3).replace('.', ','); }
+    function getGlobalMol() { return massaTimbangan / mrNaCl; }
+
+    // ==========================================
+    // SISTEM MENU & NAVIGASI SCENE
+    // ==========================================
+    const scenes = ['scene-title', 'scene-vn', 'scene-timbangan', 'scene-molaritas'];
+    let isPopupExitOpen = false;
+
+    function gotoScene(sceneId) {
+        tutupSemuaPopup();
+        scenes.forEach(id => document.getElementById(id).style.display = 'none');
+        document.getElementById(sceneId).style.display = 'block';
+
+        // Atur kemunculan Tombol Exit Global
+        if (sceneId === 'scene-title') {
+            document.getElementById('layer-global-exit').style.display = 'none';
+            document.getElementById('btn-global-exit').style.display = 'none';
+        } else {
+            document.getElementById('layer-global-exit').style.display = 'block';
+            document.getElementById('btn-global-exit').style.display = 'block';
+        }
+
+        if (sceneId === 'scene-molaritas') updateVisualBotolDiam(); // Mencegah glitch render
+    }
+
+    // ==========================================
+    // LOGIKA GLOBAL EXIT POPUP
+    // ==========================================
+    function bukaPopupExit() {
+        document.getElementById('popup-exit-container').style.display = 'block';
+        isPopupExitOpen = true;
+    }
+    
+    function tutupPopupExit() {
+        document.getElementById('popup-exit-container').style.display = 'none';
+        isPopupExitOpen = false;
+    }
+
+    function keluarKeMenuUtama() {
+        tutupPopupExit();
+        if (vnTimer) clearTimeout(vnTimer);
+        vnIsActive = false;
+        gotoScene('scene-title');
+    }
+
+    // ==========================================
+    // FASE 1 & 3: ENGINE VISUAL NOVEL (VN)
+    // ==========================================
+    const dialogIntro = [
+        { char: "Kurori", text: "Ugh, lantai lab kimia ini kotor sekali... Apa kita punya cairan pembersih lantai, Natori?" },
+        { char: "Natori", text: "Sayangnya stok di lemari sedang habis. Tapi tenang saja, kita bisa menggunakan alternatif yang ada di meja praktikum: larutan garam (NaCl)." },
+        { char: "Kurori", text: "Eh? Garam dapur? Kok bisa garam dipakai buat membersihkan lantai?" },
+        { char: "Natori", text: "Tentu bisa. Garam memiliki sifat antibakteri ringan. Melalui proses osmosis, larutan garam pekat dapat menarik air dari sel bakteri hingga bakteri tersebut mati. Ini sangat bisa diandalkan sebagai disinfektan darurat." },
+        { char: "Kurori", text: "Wah, menarik! Lalu, bagaimana cara kita membuatnya?" },
+        { char: "Natori", text: "Cukup larutkan padatan garam ke dalam air. Tapi konsentrasinya tidak boleh sembarangan. Coba kutantang kau: Buatkan aku larutan garam dengan konsentrasi tepat 0,250 M!" },
+        { char: "Kurori", text: "Hehe, tantangan diterima! Serahkan perhitungan mol dan molaritas ini padaku!" }
+    ];
+
+    const dialogSukses = [
+        { char: "Natori", text: "Sempurna! Konsentrasinya tepat 0,250 M. Kerja yang sangat bagus, Kurori." },
+        { char: "Kurori", text: "Hehe, tentu saja! Dengan kombinasi 14,5 gram NaCl dan 1 Liter air, mendapatkan 0,250 Molar itu perkara mudah!" },
+        { char: "Natori", text: "Tepat sekali. Kalkulasi massa ke mol, lalu dibagi volumenya sangat presisi. Sekarang, ayo kita mulai mengepel lab ini sebelum guru datang." }
+    ];
+
+    const dialogGagal = [
+        { char: "Natori", text: "Hmm... Sepertinya konsentrasinya kurang tepat, Kurori. Ini bukan 0,250 M." },
+        { char: "Kurori", text: "Eh? Benarkah? Aduh, sepertinya aku salah menghitung takaran gram atau kurang pas saat menuangkan airnya..." },
+        { char: "Natori", text: "Tidak apa-apa, namanya juga belajar. Ingat, massa molar (Mr) NaCl itu 58 g/mol. Coba perhatikan lagi perhitungan dari gram ke mol-nya ya." }
+    ];
+
+    let currentDialog = [];
+    let dialogIndex = 0;
+    let vnTimer = null;
+    let vnIsActive = false;
+    let questResult = null; // null = intro, true = berhasil, false = gagal
+
+    function mulaiSimulasi() { mulaiIntro(); }
+
+    function mulaiIntro() {
+        questResult = null; currentDialog = dialogIntro; dialogIndex = 0;
+        bukaLayarVN();
+    }
+
+    function mulaiOutro(isSuccess) {
+        questResult = isSuccess; currentDialog = isSuccess ? dialogSukses : dialogGagal; dialogIndex = 0;
+        bukaLayarVN();
+    }
+
+    function bukaLayarVN() {
+        gotoScene('scene-vn');
+        vnIsActive = true;
+        
+        document.getElementById('layer-vn-nextskip').style.display = 'block';
+        document.getElementById('btn-vn-next').style.display = 'block';
+        document.getElementById('btn-vn-skip').style.display = 'block';
+        document.getElementById('layer-quest-done').style.display = 'none';
+        document.getElementById('btn-quest-done').style.display = 'none';
+        document.getElementById('layer-quest-undone').style.display = 'none';
+        document.getElementById('btn-quest-retry').style.display = 'none';
+        document.getElementById('btn-quest-fail').style.display = 'none';
+        
+        renderDialog();
+    }
+
+    function renderDialog() {
+        if (dialogIndex >= currentDialog.length) { akhiriVN(); return; }
+        
+        let d = currentDialog[dialogIndex];
+        document.getElementById('vn-char-name').innerText = d.char;
+        document.getElementById('vn-dialogue').innerText = d.text;
+        
+        if (vnTimer) clearTimeout(vnTimer);
+        vnTimer = setTimeout(nextDialog, 10000); // Otomatis maju 10 detik
+    }
+
+    function nextDialog() { if (!vnIsActive || isPopupExitOpen) return; dialogIndex++; renderDialog(); }
+    function skipDialog() { if (!vnIsActive || isPopupExitOpen) return; dialogIndex = currentDialog.length - 1; renderDialog(); }
+
+    function akhiriVN() {
+        if (vnTimer) clearTimeout(vnTimer);
+        document.getElementById('layer-vn-nextskip').style.display = 'none';
+        document.getElementById('btn-vn-next').style.display = 'none';
+        document.getElementById('btn-vn-skip').style.display = 'none';
+
+        if (questResult === null) {
+            vnIsActive = false;
+            ulangFase2(); 
+        } else {
+            document.getElementById('vn-char-name').innerText = "";
+            document.getElementById('vn-dialogue').innerText = "";
+            if (questResult === true) {
+                document.getElementById('layer-quest-done').style.display = 'block';
+                document.getElementById('btn-quest-done').style.display = 'block';
+            } else {
+                document.getElementById('layer-quest-undone').style.display = 'block';
+                document.getElementById('btn-quest-retry').style.display = 'block';
+                document.getElementById('btn-quest-fail').style.display = 'block';
+            }
+        }
+    }
+
+    function ulangFase2() {
+        vnIsActive = false;
+        resetTimbangan();
+        resetSimulasiMolar();
+        gotoScene('scene-timbangan');
+    }
+
+    // Keyboard Listener
+    window.addEventListener('keydown', (e) => {
+        if (isPopupExitOpen) return;
+        if (vnIsActive && (e.code === 'Space' || e.code === 'Enter')) {
+            e.preventDefault();
+            nextDialog();
+        }
+    });
+
+    // ==========================================
+    // FASE 2: LOGIKA TIMBANGAN
+    // ==========================================
+    let maxKapasitas = 100; let timerWadah = null;
+    const elTimbangan = document.getElementById('scale-display');
+    const elWadahBotol = document.getElementById('layer-bottle-mol');
+    const elGaramPile = document.getElementById('salt-pile');
+    const popupCalcMol = document.getElementById('popup-calc-mol');
+
+    function bukaWadahSementara() {
+        elWadahBotol.style.backgroundImage = `url('mbnacl1.png')`;
+        if (timerWadah) clearTimeout(timerWadah);
+        timerWadah = setTimeout(() => { elWadahBotol.style.backgroundImage = `url('mbnacl.png')`; }, 3000);
+    }
+
+    function updateVisualMol() {
+        elTimbangan.innerText = format3Desimal(massaTimbangan);
+        let persentase = (massaTimbangan / maxKapasitas) * 100;
+        elGaramPile.style.width = persentase + '%'; elGaramPile.style.height = (persentase * 0.5) + '%'; 
+    }
+
+    function tambahMassa(jumlah) {
+        if (massaTimbangan + jumlah > maxKapasitas) return;
+        massaTimbangan += jumlah; 
+        bukaWadahSementara(); updateVisualMol();
+    }
+    
+    function resetTimbangan() { massaTimbangan = 0; bukaWadahSementara(); updateVisualMol(); }
+    
+    function bukaHitungMol() {
+        document.getElementById('calc-mass-mol').innerText = format3Desimal(massaTimbangan) + ' g';
+        document.getElementById('calc-mr-mol').innerText = format3Desimal(mrNaCl) + ' g/mol';
+        document.getElementById('calc-result-mol').innerText = format3Desimal(getGlobalMol()) + ' mol';
+        popupCalcMol.style.display = 'block';
+    }
+    
+    function tutupHitungMol() { popupCalcMol.style.display = 'none'; }
+    function tutupSemuaPopup() { tutupHitungMol(); tutupMolaritas(); tutupPopupExit(); }
+
+    elWadahBotol.style.backgroundImage = `url('mbnacl.png')`; elGaramPile.style.backgroundColor = colorNaCl; updateVisualMol();
+
+    // ==========================================
+    // FASE 2: LOGIKA MOLARITAS & EVALUASI
+    // ==========================================
+    let volumeAir_mL = 0; let zatTelahDituang = false; let larutanTelahDiaduk = false;
+    let sistemSedangAnimasi = false; let tuangAirInterval = null;
+
+    const elAlert = document.getElementById('alert-msg');
+    const elAqua = document.getElementById('layer-aqua');
+    const elWaterStream = document.getElementById('water-stream');
+    const elLiquid = document.getElementById('layer-liquid');
+    const elVolumeDisplay = document.getElementById('volume-display');
+    const elKeyAdd = document.getElementById('layer-key-add');
+    const btnAddSubstance = document.getElementById('btn-add-substance');
+    const elHandPour = document.getElementById('layer-hand-pour');
+    const elPrecipitate = document.getElementById('layer-precipitate');
+    const elStir = document.getElementById('layer-stir');
+    const popMolarity = document.getElementById('popup-molarity');
+
+    function tampilkanPeringatan(teks) { elAlert.innerText = teks; elAlert.style.opacity = '1'; setTimeout(() => elAlert.style.opacity = '0', 2500); }
+    function updateVisualBotolMiring() { elAqua.style.backgroundImage = volumeAir_mL <= 500 ? "url('mbaqua11x.png')" : "url('mbaqua01x.png')"; }
+    function updateVisualBotolDiam() {
+        if (volumeAir_mL === 0 || volumeAir_mL < 500) elAqua.style.backgroundImage = "url('mbaqua11.png')";
+        else if (volumeAir_mL === 500 || volumeAir_mL < 1000) elAqua.style.backgroundImage = "url('mbaqua01.png')"; 
+        else elAqua.style.backgroundImage = "url('mbaqua00.png')";
+    }
+
+    function prosesTuang100mL() {
+        if (volumeAir_mL >= 1000) { hentiTuangAir(); return; }
+        volumeAir_mL += 100; updateVisualBotolMiring();
+        elLiquid.style.height = (volumeAir_mL / 1000) * 100 + '%';
+        let liter = volumeAir_mL / 1000; elVolumeDisplay.innerText = format3Desimal(liter);
+        if (volumeAir_mL >= 100 && !zatTelahDituang) { elKeyAdd.style.display = 'block'; btnAddSubstance.style.display = 'block'; }
+    }
+
+    function mulaiTuangAir() {
+        if (sistemSedangAnimasi || volumeAir_mL >= 1000 || isPopupExitOpen) return;
+        elWaterStream.style.height = '33%'; prosesTuang100mL(); 
+        tuangAirInterval = setInterval(() => { prosesTuang100mL(); }, 350); 
+    }
+    
+    function hentiTuangAir() { clearInterval(tuangAirInterval); elWaterStream.style.height = '0%'; updateVisualBotolDiam(); }
+
+    function eksekusiTambahZat() {
+        if (sistemSedangAnimasi || zatTelahDituang || isPopupExitOpen) return;
+        sistemSedangAnimasi = true; elKeyAdd.style.display = 'none'; btnAddSubstance.style.display = 'none';
+        elHandPour.style.display = 'block'; elPrecipitate.style.height = '12%'; elPrecipitate.style.backgroundColor = colorNaCl;
+        setTimeout(() => {
+            elHandPour.style.display = 'none'; elStir.style.backgroundImage = "url('mbgstirx.gif')";
+            setTimeout(() => {
+                elStir.style.backgroundImage = "url('mbgstir.png')"; zatTelahDituang = true; larutanTelahDiaduk = true;
+                elPrecipitate.style.height = '0%'; elLiquid.style.backgroundColor = 'rgba(230, 245, 255, 0.5)';
+                sistemSedangAnimasi = false;
+            }, 2000);
+        }, 1000);
+    }
+
+    function resetSimulasiMolar() {
+        if (sistemSedangAnimasi) return;
+        volumeAir_mL = 0; zatTelahDituang = false; larutanTelahDiaduk = false;
+        elVolumeDisplay.innerText = "0,000"; elLiquid.style.height = '0%'; elLiquid.style.backgroundColor = 'rgba(180, 230, 255, 0.25)';
+        elPrecipitate.style.height = '0%'; updateVisualBotolDiam(); 
+        elKeyAdd.style.display = 'none'; btnAddSubstance.style.display = 'none';
+        tutupMolaritas();
+    }
+
+    function bukaMolaritas() {
+        if (volumeAir_mL === 0) { tampilkanPeringatan("TAMBAHKAN AIR TERLEBIH DAHULU!"); return; }
+        let globalMol = getGlobalMol(); let volLiters = volumeAir_mL / 1000;
+        let hasilM = (larutanTelahDiaduk) ? (globalMol / volLiters) : 0;
+        
+        document.getElementById('calc-mol-molar').innerText = format3Desimal(globalMol) + " mol";
+        document.getElementById('calc-liter-molar').innerText = format3Desimal(volLiters) + " L";
+        document.getElementById('calc-result-molar').innerText = format3Desimal(hasilM) + " M";
+        popMolarity.style.display = 'block';
+    }
+    
+    function tutupMolaritas() { popMolarity.style.display = 'none'; }
+
+    function evaluasiMisi() {
+        if (volumeAir_mL === 0 || !larutanTelahDiaduk) {
+            tampilkanPeringatan("BUAT LARUTAN TERLEBIH DAHULU!");
+            return;
+        }
+
+        let globalMol = getGlobalMol();
+        let volLiters = volumeAir_mL / 1000;
+        let hasilM = globalMol / volLiters;
+        
+        let finalStr = format3Desimal(hasilM);
+
+        if (finalStr === "0,250") {
+            mulaiOutro(true);
+        } else {
+            mulaiOutro(false);
+        }
+    }
+</script>
+</body>
+</html>
